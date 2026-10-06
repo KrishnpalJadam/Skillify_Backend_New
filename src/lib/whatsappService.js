@@ -9,17 +9,21 @@ export async function sendMetaWhatsAppMessage({ salonId, branchId, to, templateN
     where: { salonId } // ignore branchId for global config fallback
   });
 
-  if (!settings || !settings.phoneNumberId || !settings.accessToken) {
+  const phoneNumberId = settings?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = settings?.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
     console.log("WhatsApp Cloud API credentials not configured for salon:", salonId);
     return null;
   }
 
   let metaTemplateName = templateName;
-  if (settings.templates && typeof settings.templates === 'object') {
+  if (settings?.templates && typeof settings.templates === 'object') {
     metaTemplateName = settings.templates[templateName] || templateName;
   }
 
-  const url = `https://graph.facebook.com/v20.0/${settings.phoneNumberId}/messages`;
+  const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";
+  const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
   const formattedPhone = to.replace(/[^0-9]/g, "");
 
   const payload = {
