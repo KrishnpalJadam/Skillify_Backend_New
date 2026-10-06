@@ -638,33 +638,8 @@ export const buildEmailHtml = (textContent, variables) => `
 </html>`;
 
 export const attemptCustomerTemplateEmail = async ({ salonId, toEmail, templateType, context = {} }) => {
-  if (!toEmail) {
-    return { skipped: true, reason: "missing-recipient" };
-  }
-
   try {
-    const emailEnabled = await areNotificationEmailsEnabled(salonId);
-    if (!emailEnabled) {
-      return { skipped: true, reason: "email-alerts-disabled" };
-    }
-
-    const template = await resolveMessageTemplate(salonId, templateType);
-    if (!template?.content) {
-      return { skipped: true, reason: "missing-template" };
-    }
-
     const variables = await resolveTemplateContext(salonId, context);
-    const textContent = renderTemplateText(template.content, variables);
-    const subject = template.title || "Salon update";
-    
-    const html = buildEmailHtml(textContent, variables);
-
-    const delivery = await sendMail({
-      to: toEmail,
-      subject,
-      html,
-      text: textContent
-    });
 
     // Auto-dispatch WhatsApp template if recipient phone exists
     const customerPhone = variables.customer_phone || variables.customerPhone || context.phone || context.customerPhone;
@@ -676,6 +651,32 @@ export const attemptCustomerTemplateEmail = async ({ salonId, toEmail, templateT
         contextPayload: context
       }).catch((waErr) => console.error(`[WhatsApp Auto-Dispatch Error] ${templateType}:`, waErr.message));
     }
+
+    if (!toEmail) {
+      return { skipped: true, reason: "missing-email-recipient" };
+    }
+
+    const emailEnabled = await areNotificationEmailsEnabled(salonId);
+    if (!emailEnabled) {
+      return { skipped: true, reason: "email-alerts-disabled" };
+    }
+
+    const template = await resolveMessageTemplate(salonId, templateType);
+    if (!template?.content) {
+      return { skipped: true, reason: "missing-template" };
+    }
+
+    const textContent = renderTemplateText(template.content, variables);
+    const subject = template.title || "Salon update";
+    
+    const html = buildEmailHtml(textContent, variables);
+
+    const delivery = await sendMail({
+      to: toEmail,
+      subject,
+      html,
+      text: textContent
+    });
 
     return {
       skipped: false,
