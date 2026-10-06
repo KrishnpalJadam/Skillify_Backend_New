@@ -51,7 +51,7 @@ const dispatchAppointmentEvent = async (salonId, appointmentId, {
         toEmail: customerEmail,
         templateType,
         context: { appointmentId, customerId: appointment.customerId, customerPhone: appointment?.customer?.phone, customerName: appointment?.customer?.name }
-      }).catch((err) => console.error([appt-dispatch] :, err.message));
+      }).catch((err) => console.error(`[appt-dispatch] ${templateType}:`, err.message));
     }
 
     // 2. Customer in-app notification
