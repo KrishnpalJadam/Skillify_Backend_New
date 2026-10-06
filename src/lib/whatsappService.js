@@ -83,22 +83,25 @@ export async function dispatchWhatsAppTemplate({ salonId, branchId, to, template
 
     if (normalizedType === "appointment_confirmation") {
       parameters = [
-        { type: "text", parameter_name: "name", text: customerName },
-        { type: "text", parameter_name: "salon_name", text: salonName },
-        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
+        { type: "text", text: customerName },
+        { type: "text", text: salonName },
+        { type: "text", text: apptDateTime },
+        { type: "text", text: salonName }
       ];
     } else if (normalizedType === "invoice_template" || normalizedType === "payment_receipt_template") {
       normalizedType = "invoice_template";
       parameters = [
-        { type: "text", parameter_name: "name", text: customerName },
-        { type: "text", parameter_name: "invoice_amount", text: invoiceAmount },
-        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
+        { type: "text", text: customerName },
+        { type: "text", text: salonName },
+        { type: "text", text: "₹" },
+        { type: "text", text: invoiceAmount },
+        { type: "text", text: apptDateTime }
       ];
     } else if (normalizedType === "appointment_reminder") {
       parameters = [
-        { type: "text", parameter_name: "name", text: customerName },
-        { type: "text", parameter_name: "salon_name", text: salonName },
-        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
+        { type: "text", text: customerName },
+        { type: "text", text: salonName },
+        { type: "text", text: apptDateTime }
       ];
     } else if (normalizedType === "membership_activation_template" || normalizedType === "membership_purchase_template") {
       normalizedType = "membership_activation_template";
