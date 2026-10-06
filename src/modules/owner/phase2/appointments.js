@@ -45,13 +45,13 @@ const dispatchAppointmentEvent = async (salonId, appointmentId, {
 
     // 1. Customer email
     const customerEmail = appointment?.customer?.email || "";
-    if (!skipCustomerEmail && (forceCustomerEmail || (toggleKey && isOn(toggleKey))) && emailEnabled && customerEmail) {
+    if (!skipCustomerEmail && (forceCustomerEmail || (toggleKey && isOn(toggleKey)))) {
       await attemptCustomerTemplateEmail({
         salonId,
         toEmail: customerEmail,
         templateType,
-        context: { appointmentId, customerId: appointment.customerId }
-      }).catch((err) => console.error(`[appt-email] ${templateType}:`, err.message));
+        context: { appointmentId, customerId: appointment.customerId, customerPhone: appointment?.customer?.phone, customerName: appointment?.customer?.name }
+      }).catch((err) => console.error([appt-dispatch] :, err.message));
     }
 
     // 2. Customer in-app notification
