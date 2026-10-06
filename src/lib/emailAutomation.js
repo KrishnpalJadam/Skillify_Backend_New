@@ -147,7 +147,7 @@ export const maybeSendFeedbackRequestForAppointment = async ({
       customer: true
     }
   });
-  if (!appointment?.customer?.email) {
+  if (!appointment?.customer?.email && !appointment?.customer?.phone) {
     return { skipped: true, reason: "missing-recipient" };
   }
   if (String(appointment.status || "").toUpperCase() !== "COMPLETED") {
@@ -165,11 +165,12 @@ export const maybeSendFeedbackRequestForAppointment = async ({
 
   const delivery = await attemptCustomerTemplateEmail({
     salonId,
-    toEmail: appointment.customer.email,
-    templateType: "feedback_request_template",
+    toEmail: appointment.customer?.email || "",
+    templateType: "google_review_feedback",
     context: {
       appointmentId: appointment.id,
-      customerId: appointment.customerId
+      customerId: appointment.customerId,
+      customerPhone: appointment.customer?.phone
     }
   });
 
@@ -204,7 +205,7 @@ export const maybeSendFeedbackRequestForInvoice = async ({
       appointment: true
     }
   });
-  if (!invoice?.customer?.email) {
+  if (!invoice?.customer?.email && !invoice?.customer?.phone) {
     return { skipped: true, reason: "missing-recipient" };
   }
   if (String(invoice.status || "").toUpperCase() !== "PAID") {
@@ -232,11 +233,12 @@ export const maybeSendFeedbackRequestForInvoice = async ({
 
   const delivery = await attemptCustomerTemplateEmail({
     salonId,
-    toEmail: invoice.customer.email,
-    templateType: "feedback_request_template",
+    toEmail: invoice.customer?.email || "",
+    templateType: "google_review_feedback",
     context: {
       invoiceId: invoice.id,
-      customerId: invoice.customerId
+      customerId: invoice.customerId,
+      customerPhone: invoice.customer?.phone
     }
   });
 

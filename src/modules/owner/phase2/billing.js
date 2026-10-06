@@ -40,13 +40,21 @@ const sendInvoiceAutomationEmails = async (salonId, invoice) => {
 
   const { isOn, emailEnabled } = await getNotificationToggles(salonId, branchId).catch(() => ({ isOn: () => true, emailEnabled: true }));
 
-  // Invoice email (advanceReceivedInvoice toggle)
-  if (isOn("advanceReceivedInvoice") && emailEnabled && toEmail) {
+  // Always send invoice template (WhatsApp + Email)
+  await attemptCustomerTemplateEmail({
+    salonId,
+    toEmail,
+    templateType: "invoice_template",
+    context: { invoiceId: invoice?.id, customerId, phone: invoice?.customer?.phone }
+  }).catch(() => {});
+
+  // If invoice is PAID, automatically dispatch Google Review / Feedback template
+  if (invoice?.status === "PAID" && (toEmail || invoice?.customer?.phone)) {
     await attemptCustomerTemplateEmail({
       salonId,
       toEmail,
-      templateType: "invoice_template",
-      context: { invoiceId: invoice?.id, customerId }
+      templateType: "google_review_feedback",
+      context: { invoiceId: invoice?.id, customerId, phone: invoice?.customer?.phone }
     }).catch(() => {});
   }
 
