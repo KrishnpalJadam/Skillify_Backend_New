@@ -1692,8 +1692,21 @@ ownerRouter.post("/customers", requireSalonPermission("customers", "create"), va
           }).catch(() => {});
         }
       }
+
+      // ── Dispatch Customer Welcome WhatsApp Template ──────────────────────────
+      const { attemptCustomerTemplateEmail } = await import("../../lib/emailNotifications.js");
+      await attemptCustomerTemplateEmail({
+        salonId: req.salonId,
+        toEmail: customer.email || "",
+        templateType: "customer_welcome",
+        context: {
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone
+        }
+      }).catch(() => {});
     } catch (referralErr) {
-      console.error("[owner/customers] Referral code notification error (non-blocking):", referralErr.message);
+      console.error("[owner/customers] Notification error (non-blocking):", referralErr.message);
     }
   })();
 });

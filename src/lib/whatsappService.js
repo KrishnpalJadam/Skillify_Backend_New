@@ -120,6 +120,31 @@ export async function dispatchWhatsAppTemplate({ salonId, branchId, to, template
         { type: "text", parameter_name: "salon_name", text: salonName },
         { type: "text", parameter_name: "package_balance", text: packageBalance }
       ];
+    } else if (normalizedType === "package_expiry_template") {
+      parameters = [
+        { type: "text", parameter_name: "customer_name", text: customerName },
+        { type: "text", parameter_name: "package_balance", text: packageBalance }
+      ];
+    } else if (normalizedType === "customer_welcome") {
+      parameters = [
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "salon_name", text: salonName }
+      ];
+    } else if (normalizedType === "birthday_template") {
+      parameters = [
+        { type: "text", parameter_name: "name", text: customerName }
+      ];
+    } else if (normalizedType === "anniversary_template") {
+      parameters = [
+        { type: "text", parameter_name: "name", text: customerName }
+      ];
+    } else if (normalizedType === "order_confirmation") {
+      parameters = [
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "order_number", text: variables.order_number || "ORD-001" },
+        { type: "text", parameter_name: "salon_name", text: salonName },
+        { type: "text", parameter_name: "order_amount", text: variables.order_amount || "0.00" }
+      ];
     } else if (normalizedType === "google_review_feedback" || normalizedType === "feedback_follow_up" || normalizedType === "feedback_request_template") {
       normalizedType = "google_review_feedback";
       parameters = [
