@@ -1,6 +1,7 @@
 import { prisma } from "../../../lib/prisma.js";
 import { buildCsv } from "../../../lib/phase2.js";
 import { buildWhatsAppLink, getCampaignAudience, renderTemplateText } from "../../../lib/phase3.js";
+import { dispatchWhatsAppTemplate, sendMetaWhatsAppMessage } from "../../../lib/whatsappService.js";
 import { sendMail } from "../../../lib/mailer.js";
 import { createAuditLog } from "../../../lib/phase4.js";
 import { requireFeatureEnabled, requireSalonPermission } from "../../../middlewares/rbac.js";
@@ -110,10 +111,17 @@ export const registerCommunicationRoutes = (ownerRouter) => {
       senderName: req.body.senderName || null,
       apiUrl: req.body.apiUrl || null,
       apiKeyPlaceholder: req.body.apiKeyPlaceholder || null,
+      phoneNumberId: req.body.phoneNumberId || null,
+      wabaId: req.body.wabaId || null,
+      accessToken: req.body.accessToken || null,
+      appId: req.body.appId || null,
       automationEnabled: req.body.automationEnabled ?? false,
       deliveryStatusEnabled: req.body.deliveryStatusEnabled ?? false,
       readStatusEnabled: req.body.readStatusEnabled ?? false
     };
+    if (req.body.templates) {
+      data.templates = req.body.templates;
+    }
     res.json(existing
       ? await prisma.whatsAppSetting.update({ where: { id: existing.id }, data })
       : await prisma.whatsAppSetting.create({ data: { salonId: req.salonId, branchId, ...data } }));
@@ -237,6 +245,15 @@ export const registerCommunicationRoutes = (ownerRouter) => {
         html: buildEmailHtml(req.body.message),
         text: req.body.message
       });
+    } else {
+      if (req.body.templateType) {
+        await dispatchWhatsAppTemplate({
+          salonId: req.salonId,
+          to: recipient,
+          templateType: req.body.templateType,
+          contextPayload: { customerId: req.body.customerId }
+        }).catch((err) => console.error("[Manual WhatsApp Send Error]:", err.message));
+      }
     }
 
     const row = await prisma.whatsAppLog.create({

@@ -2041,6 +2041,11 @@ model WhatsAppSetting {
   senderName            String?
   apiUrl                String?
   apiKeyPlaceholder     String?
+  phoneNumberId         String?
+  wabaId                String?
+  accessToken           String?  @db.Text
+  appId                 String?
+  templates             Json?
   automationEnabled     Boolean  @default(false)
   deliveryStatusEnabled Boolean  @default(false)
   readStatusEnabled     Boolean  @default(false)

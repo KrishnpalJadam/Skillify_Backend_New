@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { prisma } from "../../../lib/prisma.js";
 import { getNotificationToggles, maybeSendFeedbackRequestForAppointment } from "../../../lib/emailAutomation.js";
 import { attemptCustomerTemplateEmail } from "../../../lib/emailNotifications.js";
+import { dispatchWhatsAppTemplate } from "../../../lib/whatsappService.js";
 import { checkStaffAvailability, ensureScopedBranch, ensureScopedCustomer, ensureScopedService, ensureScopedStaffMembership, getSalonSetting, logCustomerTimeline, normalizeBranchId, toAmount } from "../../../lib/phase2.js";
 import { createCustomerNotification, createStaffNotification } from "../../../lib/phase4.js";
 import { requireFeatureEnabled, requireSalonPermission } from "../../../middlewares/rbac.js";

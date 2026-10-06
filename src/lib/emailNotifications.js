@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 import { sendMail } from "./mailer.js";
 import { renderTemplateText, resolveTemplateContext } from "./phase3.js";
+import { dispatchWhatsAppTemplate } from "./whatsappService.js";
 
 const normalizeTemplateType = (value) => String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
 
@@ -664,6 +665,17 @@ export const attemptCustomerTemplateEmail = async ({ salonId, toEmail, templateT
       html,
       text: textContent
     });
+
+    // Auto-dispatch WhatsApp template if recipient phone exists
+    const customerPhone = variables.customer_phone || variables.customerPhone || context.phone || context.customerPhone;
+    if (customerPhone) {
+      dispatchWhatsAppTemplate({
+        salonId,
+        to: customerPhone,
+        templateType,
+        contextPayload: context
+      }).catch((waErr) => console.error(`[WhatsApp Auto-Dispatch Error] ${templateType}:`, waErr.message));
+    }
 
     return {
       skipped: false,
