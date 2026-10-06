@@ -83,43 +83,44 @@ export async function dispatchWhatsAppTemplate({ salonId, branchId, to, template
 
     if (normalizedType === "appointment_confirmation") {
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: salonName },
-        { type: "text", text: apptDateTime }
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "salon_name", text: salonName },
+        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
       ];
     } else if (normalizedType === "invoice_template" || normalizedType === "payment_receipt_template") {
       normalizedType = "invoice_template";
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: invoiceAmount },
-        { type: "text", text: apptDateTime }
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "invoice_amount", text: invoiceAmount },
+        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
       ];
     } else if (normalizedType === "appointment_reminder") {
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: apptDateTime }
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "salon_name", text: salonName },
+        { type: "text", parameter_name: "appointment_date_time", text: apptDateTime }
       ];
     } else if (normalizedType === "membership_activation_template" || normalizedType === "membership_purchase_template") {
       normalizedType = "membership_activation_template";
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: membershipExpiry }
+        { type: "text", parameter_name: "customer_name", text: customerName },
+        { type: "text", parameter_name: "membership_expiry", text: membershipExpiry }
       ];
     } else if (normalizedType === "membership_expiry_template") {
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: membershipExpiry }
+        { type: "text", parameter_name: "name", text: customerName },
+        { type: "text", parameter_name: "membership_expiry", text: membershipExpiry }
       ];
     } else if (normalizedType === "package_purchase_template") {
       parameters = [
-        { type: "text", text: customerName },
-        { type: "text", text: salonName },
-        { type: "text", text: packageBalance }
+        { type: "text", parameter_name: "customer_name", text: customerName },
+        { type: "text", parameter_name: "salon_name", text: salonName },
+        { type: "text", parameter_name: "package_balance", text: packageBalance }
       ];
     } else if (normalizedType === "google_review_feedback" || normalizedType === "feedback_follow_up" || normalizedType === "feedback_request_template") {
       normalizedType = "google_review_feedback";
       parameters = [
-        { type: "text", text: customerName }
+        { type: "text", parameter_name: "name", text: customerName }
       ];
     }
 
