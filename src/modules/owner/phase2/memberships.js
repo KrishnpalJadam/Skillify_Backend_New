@@ -1,6 +1,7 @@
 import { prisma } from "../../../lib/prisma.js";
 import { logCustomerTimeline, normalizeBranchId } from "../../../lib/phase2.js";
 import { createPosInvoice } from "../../../lib/pos.js";
+import { attemptCustomerTemplateEmail } from "../../../lib/emailNotifications.js";
 import { requireSalonPermission } from "../../../middlewares/rbac.js";
 import { schemas, validate } from "../../../middlewares/validate.js";
 
@@ -198,6 +199,18 @@ export const registerMembershipRoutes = (ownerRouter) => {
       } catch (invoiceErr) {
         console.error("[assign-membership] Invoice creation failed (non-blocking):", invoiceErr.message);
       }
+
+      // Automatically dispatch VIP Membership Activation WhatsApp template
+      attemptCustomerTemplateEmail({
+        salonId: req.salonId,
+        toEmail: "",
+        templateType: "membership_activation_template",
+        context: {
+          customerId: req.body.customerId,
+          customerMembershipId: created.id,
+          invoiceId: invoice?.id
+        }
+      }).catch((err) => console.error("[membership-assign-wa-error]:", err.message));
 
       res.status(201).json({ assignment: created, invoice: invoice || null });
     } catch (err) {
@@ -515,6 +528,18 @@ export const registerMembershipRoutes = (ownerRouter) => {
       } catch (invoiceErr) {
         console.error("[assign-package] Invoice creation failed (non-blocking):", invoiceErr.message);
       }
+
+      // Automatically dispatch Package Purchase WhatsApp template
+      attemptCustomerTemplateEmail({
+        salonId: req.salonId,
+        toEmail: "",
+        templateType: "package_purchase_template",
+        context: {
+          customerId: req.body.customerId,
+          customerPackageId: created.id,
+          invoiceId: invoice?.id
+        }
+      }).catch((err) => console.error("[package-assign-wa-error]:", err.message));
 
       res.status(201).json({ assignment: created, invoice: invoice || null });
     } catch (err) {
