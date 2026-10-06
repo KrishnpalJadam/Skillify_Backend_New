@@ -597,9 +597,9 @@ export const resolveTemplateContext = async (salonId, context = {}) => {
     prisma.salon.findUnique({ where: { id: salonId } }),
     prisma.salonSetting.findFirst({ where: { salonId, branchId: null } }),
     context.customerId ? prisma.customer.findFirst({ where: { id: context.customerId, salonId } }) : null,
-    context.appointmentId ? prisma.appointment.findFirst({ where: { id: context.appointmentId, salonId }, include: { customer: true } }) : null,
-    context.invoiceId ? prisma.invoice.findFirst({ where: { id: context.invoiceId, salonId }, include: { customer: true } }) : null,
-    context.orderId ? prisma.onlineOrder.findFirst({ where: { id: context.orderId, salonId }, include: { customer: true } }) : null,
+    context.appointmentId ? prisma.appointment.findFirst({ where: { id: context.appointmentId, salonId }, include: { customer: true, branch: true } }) : null,
+    context.invoiceId ? prisma.invoice.findFirst({ where: { id: context.invoiceId, salonId }, include: { customer: true, branch: true, appointment: true } }) : null,
+    context.orderId ? prisma.onlineOrder.findFirst({ where: { id: context.orderId, salonId }, include: { customer: true, branch: true } }) : null,
     context.customerMembershipId ? prisma.customerMembership.findFirst({ where: { id: context.customerMembershipId, salonId }, include: { membershipPlan: true, customer: true } }) : null,
     context.customerPackageId ? prisma.customerPackage.findFirst({ where: { id: context.customerPackageId, salonId }, include: { package: true, customer: true } }) : null
   ]);
@@ -614,23 +614,29 @@ export const resolveTemplateContext = async (salonId, context = {}) => {
   };
 
   const resolvedCustomer = customer || appointment?.customer || invoice?.customer || order?.customer || membership?.customer || pack?.customer || null;
+  const resolvedBranch = invoice?.branch || appointment?.branch || order?.branch || null;
+  const resolvedSalonName = resolvedBranch?.name || salon?.name || "Styluxe Unisex Salon";
+
   const currencyCode = salon?.currency || salonSetting?.advancedSettings?.genericSettings?.currency || "INR";
   const CURRENCY_SYMBOLS = { INR: "₹", PKR: "Rs.", USD: "$", EUR: "€", GBP: "£", AED: "AED ", SAR: "SAR " };
   const currencySymbol = CURRENCY_SYMBOLS[currencyCode.toUpperCase()] || `${currencyCode} `;
 
+  const resolvedDate = appointment?.startAt || invoice?.appointment?.startAt || invoice?.completedAt || invoice?.createdAt || (context.appointmentDateTime ? new Date(context.appointmentDateTime) : new Date());
+  const formattedDateTime = formatInTimezone(resolvedDate, { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+
   const resolved = {
-    customer_name: resolvedCustomer?.name || context.customer_name || context.customerName || context.name || templateFallbacks.customer_name,
+    customer_name: resolvedCustomer?.name || context.customer_name || context.customerName || context.name || "Valued Customer",
     customer_phone: resolvedCustomer?.phone || context.customer_phone || context.customerPhone || context.phone || "",
-    salon_name: salon?.name || context.salon_name || context.salonName || templateFallbacks.salon_name,
+    salon_name: resolvedSalonName,
     currency_symbol: currencySymbol,
-    appointment_date_time: appointment?.startAt ? formatInTimezone(appointment.startAt, { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }) : (context.appointment_date_time || context.appointmentDateTime || templateFallbacks.appointment_date_time),
-    invoice_amount: invoice ? Number(invoice.total || 0).toFixed(2) : (context.invoice_amount != null ? String(context.invoice_amount) : (context.invoiceAmount != null ? String(context.invoiceAmount) : templateFallbacks.invoice_amount)),
-    membership_expiry: resolvedCustomer?.memberships?.[0]?.endsAt ? formatInTimezone(resolvedCustomer.memberships[0].endsAt, { year: "numeric", month: "long", day: "numeric" }) : (membership?.endsAt ? formatInTimezone(membership.endsAt, { year: "numeric", month: "long", day: "numeric" }) : (context.membership_expiry || context.membershipExpiry || templateFallbacks.membership_expiry)),
-    package_balance: pack?.remainingSessions != null ? String(pack.remainingSessions) : (context.package_balance != null ? String(context.package_balance) : (context.packageBalance != null ? String(context.packageBalance) : templateFallbacks.package_balance)),
-    order_number: order?.orderNumber || context.order_number || context.orderNumber || templateFallbacks.order_number,
-    order_amount: order ? Number(order.total || 0).toFixed(2) : (context.order_amount != null ? String(context.order_amount) : (context.orderAmount != null ? String(context.orderAmount) : templateFallbacks.order_amount)),
-    catalog_link: salon ? buildCatalogLink(salon.slug) : templateFallbacks.catalog_link,
-    payment_link: invoice?.paymentLinkToken ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/pay/${invoice.paymentLinkToken}` : templateFallbacks.payment_link,
+    appointment_date_time: formattedDateTime,
+    invoice_amount: invoice ? Number(invoice.total || 0).toFixed(2) : (context.invoice_amount != null ? String(context.invoice_amount) : (context.invoiceAmount != null ? String(context.invoiceAmount) : "0.00")),
+    membership_expiry: resolvedCustomer?.memberships?.[0]?.endsAt ? formatInTimezone(resolvedCustomer.memberships[0].endsAt, { year: "numeric", month: "long", day: "numeric" }) : (membership?.endsAt ? formatInTimezone(membership.endsAt, { year: "numeric", month: "long", day: "numeric" }) : (context.membership_expiry || context.membershipExpiry || "soon")),
+    package_balance: pack?.remainingSessions != null ? String(pack.remainingSessions) : (context.package_balance != null ? String(context.package_balance) : (context.packageBalance != null ? String(context.packageBalance) : "0")),
+    order_number: order?.orderNumber || context.order_number || context.orderNumber || "N/A",
+    order_amount: order ? Number(order.total || 0).toFixed(2) : (context.order_amount != null ? String(context.order_amount) : (context.orderAmount != null ? String(context.orderAmount) : "0.00")),
+    catalog_link: salon ? buildCatalogLink(salon.slug) : "",
+    payment_link: invoice?.paymentLinkToken ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/pay/${invoice.paymentLinkToken}` : "",
     feedback_link: context.feedback_link || (appointment?.id ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/feedback?appointmentId=${appointment.id}` : (invoice?.id ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/feedback?invoiceId=${invoice.id}` : "")),
     invoice_link: context.invoice_link || (invoice?.id ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/invoice/${invoice.id}` : (order?.invoiceId ? `${process.env.FRONTEND_APP_URL || "http://127.0.0.1:5173"}/invoice/${order.invoiceId}` : "")),
     referral_code: context.referralCode || context.referral_code || "",
