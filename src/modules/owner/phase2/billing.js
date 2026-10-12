@@ -857,6 +857,12 @@ export const registerBillingRoutes = (ownerRouter) => {
         });
       }
 
+      if (finalInvoice && (finalInvoice.status === "PAID" || additionalPayments.length > 0)) {
+        sendInvoiceAutomationEmails(req.salonId, finalInvoice).catch((err) => {
+          console.error("Failed to send invoice automation emails on invoice patch:", err);
+        });
+      }
+
       res.json(finalInvoice);
     } catch (error) {
       return sendRouteError(res, error, "Could not update invoice");
@@ -1131,12 +1137,7 @@ export const registerBillingRoutes = (ownerRouter) => {
         include: { customer: true, items: true, payments: true, branch: true, appointment: true }
       });
 
-      attemptCustomerTemplateEmail({
-        salonId: req.salonId,
-        toEmail: invoice.customer?.email || "",
-        templateType: "invoice_template",
-        context: { invoiceId: invoice.id, customerId: invoice.customerId }
-      }).catch(() => {});
+      sendInvoiceAutomationEmails(req.salonId, finalInvoice).catch(() => {});
 
       res.json(finalInvoice);
     } catch (error) {

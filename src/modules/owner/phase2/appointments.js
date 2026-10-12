@@ -38,6 +38,24 @@ const dispatchAppointmentEvent = async (salonId, appointmentId, {
     const appointment = await fetchAppointment(salonId, appointmentId);
     if (!appointment) return { skipped: true, reason: "appointment-not-found" };
 
+    // Direct WhatsApp dispatch whenever customer phone exists
+    const customerPhone = appointment?.customer?.phone;
+    if (customerPhone) {
+      dispatchWhatsAppTemplate({
+        salonId,
+        branchId: branchId || appointment.branchId,
+        to: customerPhone,
+        templateType,
+        contextPayload: {
+          appointmentId,
+          customerId: appointment.customerId,
+          customerPhone,
+          customerName: appointment?.customer?.name,
+          appointmentDateTime: appointment.startAt
+        }
+      }).catch((waErr) => console.error(`[WhatsApp Appt Event Error] ${templateType}:`, waErr.message));
+    }
+
     const { isOn, emailEnabled } = await getNotificationToggles(salonId, branchId || appointment.branchId);
 
     // Master switch: if messageForAppointments is OFF, suppress all appointment notifications

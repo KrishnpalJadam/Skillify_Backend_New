@@ -575,12 +575,12 @@ export const convertOrderToInvoice = async ({ salonId, orderId, actorUser }) => 
 
 const templateFallbacks = {
   customer_name: "Customer",
-  salon_name: "Skillify",
-  appointment_date_time: "N/A",
+  salon_name: "Styluxe Unisex Salon Alwal",
+  appointment_date_time: "your scheduled time",
   invoice_amount: "0.00",
-  membership_expiry: "N/A",
+  membership_expiry: "soon",
   package_balance: "0",
-  order_number: "N/A",
+  order_number: "ORD-001",
   order_amount: "0.00",
   catalog_link: "",
   payment_link: ""
