@@ -9,8 +9,8 @@ export async function sendMetaWhatsAppMessage({ salonId, branchId, to, templateN
     where: { salonId } // ignore branchId for global config fallback
   });
 
-  const phoneNumberId = settings?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = settings?.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || settings?.phoneNumberId;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || settings?.accessToken;
 
   if (!phoneNumberId || !accessToken) {
     console.log("WhatsApp Cloud API credentials not configured for salon:", salonId);
@@ -24,7 +24,12 @@ export async function sendMetaWhatsAppMessage({ salonId, branchId, to, templateN
 
   const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";
   const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
-  const formattedPhone = to.replace(/[^0-9]/g, "");
+  let formattedPhone = String(to || "").replace(/[^0-9]/g, "");
+  if (formattedPhone.length === 11 && formattedPhone.startsWith("0")) {
+    formattedPhone = `91${formattedPhone.slice(1)}`;
+  } else if (formattedPhone.length === 10) {
+    formattedPhone = `91${formattedPhone}`;
+  }
 
   const payload = {
     messaging_product: "whatsapp",
@@ -42,18 +47,18 @@ export async function sendMetaWhatsAppMessage({ salonId, branchId, to, templateN
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${settings.accessToken}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
-    
+
     const data = await res.json();
     if (!res.ok) {
       console.error("[WhatsApp API Error Response]:", data);
       throw new Error(data?.error?.message || "Failed to send WhatsApp message");
     }
-    
+
     console.log(`[WhatsApp API] Message sent to ${formattedPhone} via ${metaTemplateName}`);
     return data;
   } catch (error) {
@@ -80,13 +85,13 @@ export async function dispatchWhatsAppTemplate({ salonId, branchId, to, template
     if (metaTemplateName === "appointment_cancelled" || metaTemplateName === "appointment_cancelled_sty0110") {
       metaTemplateName = "appointment_cancel";
     }
-    
+
     // Resolve standard variables
     const variables = await resolveTemplateContext(salonId, contextPayload);
     const customerName = variables.customer_name || variables.customerName || variables.name || "Valued Customer";
     const salonName = variables.salon_name || variables.salonName || "Styluxe Unisex Salon Alwal";
     const apptDateTime = variables.appointment_date_time || variables.appointmentDateTime || "your scheduled time";
-    
+
     // Clean numeric price formatting
     const rawInvAmount = variables.invoice_amount || variables.invoiceAmount || contextPayload?.total || "0.00";
     const numInvAmount = Number(String(rawInvAmount).replace(/[^0-9.]/g, "")) || 0;
@@ -98,7 +103,7 @@ export async function dispatchWhatsAppTemplate({ salonId, branchId, to, template
 
     const membershipExpiry = variables.membership_expiry || variables.membershipExpiry || "soon";
     const packageBalance = variables.package_balance != null ? String(variables.package_balance) : (variables.packageBalance != null ? String(variables.packageBalance) : "0");
-    
+
     let parameters = [];
 
     // Map according to exact Meta template definition
