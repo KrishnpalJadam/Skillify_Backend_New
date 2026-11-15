@@ -142,10 +142,10 @@ const resolveMembershipPermissions = async (salonId, customRoleId, explicitPermi
     }
   }
   let base;
-  if (role) {
+  if (explicitPermissions && Object.keys(explicitPermissions).length > 0) {
+    base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...(role?.permissions || {}), ...explicitPermissions };
+  } else if (role) {
     base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...(role.permissions || {}) };
-  } else if (explicitPermissions && Object.keys(explicitPermissions).length > 0) {
-    base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...explicitPermissions };
   } else {
     base = { ...STAFF_SELF_SERVICE_DEFAULTS };
   }
