@@ -5,7 +5,7 @@ import { defaultOwnerPermissions } from "../lib/permissions.js";
 export const authMiddleware = async (req, res, next) => {
   try {
     const url = req.originalUrl || req.path || "";
-    if (url.includes("/public") || url.includes("/auth") || url.includes("/test-email") || url.includes("/uploads")) {
+    if (url.includes("/public") || (url.includes("/auth") && !url.includes("/auth/me")) || url.includes("/test-email") || url.includes("/uploads")) {
       return next();
     }
     let token = null;
@@ -49,7 +49,7 @@ export const authMiddleware = async (req, res, next) => {
       ? await Promise.all([
           prisma.salon.findUnique({
             where: { id: resolvedSalonId },
-            select: { featureFlags: true }
+            select: { name: true, featureFlags: true }
           }),
           prisma.subscription.findFirst({
             where: { salonId: resolvedSalonId, status: { in: ["ACTIVE", "TRIAL"] } },
@@ -85,7 +85,9 @@ export const authMiddleware = async (req, res, next) => {
       customerId: customerProfile?.id || null,
       membershipId: membership?.id || null,
       salonId: resolvedSalonId,
+      salonName: salon?.name || null,
       salonRole: membership?.salonRole || null,
+      customRoleId: membership?.customRoleId || null,
       branchId: membership?.branchId || null,
       permissions: mergedPermissions,
       featureFlags: mergedFeatureFlags,

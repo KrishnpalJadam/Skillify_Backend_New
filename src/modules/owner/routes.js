@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma.js";
+import { defaultOwnerPermissions } from "../../lib/permissions.js";
 import { attachBranchStock, buildCsv } from "../../lib/phase2.js";
 import { createAuditLog } from "../../lib/phase4.js";
 import { patchRouterForAsync } from "../../lib/async-handler.js";
@@ -131,7 +132,10 @@ const STAFF_SELF_SERVICE_DEFAULTS = {
   enquiries: ["view", "create", "edit"]
 };
 
-const resolveMembershipPermissions = async (salonId, customRoleId, explicitPermissions) => {
+const resolveMembershipPermissions = async (salonId, customRoleId, explicitPermissions, salonRole = null) => {
+  if (salonRole === "SALON_OWNER" && !customRoleId) {
+    return { ...defaultOwnerPermissions, ...(explicitPermissions || {}) };
+  }
   let role = null;
   if (customRoleId) {
     role = await prisma.customRole.findFirst({ where: { id: customRoleId, salonId } });
@@ -142,10 +146,10 @@ const resolveMembershipPermissions = async (salonId, customRoleId, explicitPermi
     }
   }
   let base;
-  if (explicitPermissions && Object.keys(explicitPermissions).length > 0) {
-    base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...(role?.permissions || {}), ...explicitPermissions };
-  } else if (role) {
+  if (role) {
     base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...(role.permissions || {}) };
+  } else if (explicitPermissions && Object.keys(explicitPermissions).length > 0) {
+    base = { ...STAFF_SELF_SERVICE_DEFAULTS, ...explicitPermissions };
   } else {
     base = { ...STAFF_SELF_SERVICE_DEFAULTS };
   }
@@ -175,7 +179,7 @@ const createLoginUserForSalon = async (salonId, payload) => {
     if (firstBranch) branchId = firstBranch.id;
   }
   if (branchId) await ensureBranch(salonId, branchId);
-  const resolvedPermissions = await resolveMembershipPermissions(salonId, customRoleId, permissions);
+  const resolvedPermissions = await resolveMembershipPermissions(salonId, customRoleId, permissions, salonRole);
 
   if (serviceIds.length) {
     const services = await prisma.service.findMany({ where: { id: { in: serviceIds }, salonId, isActive: true } });
@@ -2106,10 +2110,17 @@ ownerRouter.patch("/custom-roles/:id", requireSalonPermission("staff", "edit"), 
   }
   const role = await prisma.customRole.findFirst({ where: { id: req.params.id, salonId: req.salonId } });
   if (!role) return res.status(404).json({ message: "Custom role not found" });
-  res.json(await prisma.customRole.update({
+  const cleanedPerms = stripDeletePerms(req.body.permissions);
+  const updatedRole = await prisma.customRole.update({
     where: { id: role.id },
-    data: { name: req.body.name, description: req.body.description || null, permissions: stripDeletePerms(req.body.permissions) }
-  }));
+    data: { name: req.body.name, description: req.body.description || null, permissions: cleanedPerms }
+  });
+  const propagatedPerms = stripDeletePerms({ ...STAFF_SELF_SERVICE_DEFAULTS, ...(cleanedPerms || {}) });
+  await prisma.userSalon.updateMany({
+    where: { salonId: req.salonId, customRoleId: role.id },
+    data: { permissions: propagatedPerms }
+  });
+  res.json(updatedRole);
 });
 ownerRouter.post("/users", requireSalonPermission("staff", "create"), validate(schemas.ownerUser), async (req, res) => {
   if (req.user.salonRole === "MANAGER") {
@@ -2152,9 +2163,16 @@ ownerRouter.patch("/users/:id", requireSalonPermission("staff", "edit"), validat
     const firstBranch = await prisma.branch.findFirst({ where: { salonId: req.salonId, isActive: true }, orderBy: { createdAt: "asc" } });
     if (firstBranch) branchId = firstBranch.id;
   }
-  const customRoleId = req.body.customRoleId === null ? null : (req.body.customRoleId ?? row.customRoleId ?? null);
+  const customRoleId = req.body.customRoleId === null
+    ? null
+    : req.body.customRoleId !== undefined
+      ? req.body.customRoleId
+      : req.body.permissions !== undefined
+        ? null
+        : (row.customRoleId ?? null);
+  const nextSalonRole = req.body.salonRole ?? row.salonRole;
   if (branchId) await ensureBranch(req.salonId, branchId);
-  const resolvedPermissions = await resolveMembershipPermissions(req.salonId, customRoleId, req.body.permissions);
+  const resolvedPermissions = await resolveMembershipPermissions(req.salonId, customRoleId, req.body.permissions, nextSalonRole);
   if (Array.isArray(req.body.serviceIds) && req.body.serviceIds.length) {
     const services = await prisma.service.findMany({ where: { id: { in: req.body.serviceIds }, salonId: req.salonId, isActive: true } });
     if (services.length !== req.body.serviceIds.length) return res.status(400).json({ message: "One or more assigned services are invalid for this salon" });
@@ -2239,9 +2257,16 @@ ownerRouter.patch("/staff-users/:id", requireSalonPermission("staff", "edit"), v
     if (dup) return res.status(400).json({ message: "Another staff member already uses this phone number" });
   }
   const branchId = req.body.branchId === null ? null : normalizeBranchId(req.body.branchId ?? row.branchId);
-  const customRoleId = req.body.customRoleId === null ? null : (req.body.customRoleId ?? row.customRoleId ?? null);
+  const customRoleId = req.body.customRoleId === null
+    ? null
+    : req.body.customRoleId !== undefined
+      ? req.body.customRoleId
+      : req.body.permissions !== undefined
+        ? null
+        : (row.customRoleId ?? null);
+  const nextSalonRole = req.body.salonRole ?? row.salonRole;
   if (branchId) await ensureBranch(req.salonId, branchId);
-  const resolvedPermissions = await resolveMembershipPermissions(req.salonId, customRoleId, req.body.permissions);
+  const resolvedPermissions = await resolveMembershipPermissions(req.salonId, customRoleId, req.body.permissions, nextSalonRole);
   const updated = await prisma.userSalon.update({
     where: { id: req.params.id },
     data: {

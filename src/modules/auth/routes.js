@@ -178,6 +178,25 @@ authRouter.post("/refresh", async (req, res) => {
 
 authRouter.post("/logout", async (req, res) => res.json({ ok: true }));
 
+authRouter.get("/me", async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  return res.json({
+    user: { id: req.user.id, name: req.user.name, systemRole: req.user.systemRole },
+    membership: req.user.salonId
+      ? {
+          salonId: req.user.salonId,
+          salonName: req.user.salonName || null,
+          salonRole: req.user.salonRole,
+          customRoleId: req.user.customRoleId || null,
+          branchId: req.user.branchId || null,
+          permissions: req.user.permissions || {},
+          featureFlags: req.user.featureFlags || {},
+          plan: req.user.plan || null
+        }
+      : null
+  });
+});
+
 authRouter.post("/forgot-password", validate(schemas.forgotPassword), async (req, res) => {
   const { email } = req.body;
   const user = await prisma.user.findUnique({
